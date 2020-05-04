@@ -40,23 +40,18 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 		templateHandler: h,
 	}
 	createdCount := 0
-	for endpoint, endpointInfo := range paths {
-		for registeredEndpoint, templateType := range endpointRegistry {
-			if endpoint != registeredEndpoint {
+	for endpoint, templateType := range endpointRegistry {
+		logger.Debug(fmt.Sprintf("generating %s for %s\n", templateType.String(), endpoint))
+		if err := fCreator.GenerateCode(endpoint, paths[endpoint], templateType); err != nil {
+			if err == errUnsupported {
+				logger.Warn(fmt.Sprintf("couldn't generate %s, continuing", endpoint))
 				continue
 			}
-			logger.Debug(fmt.Sprintf("generating %s for %s\n", templateType.String(), endpoint))
-			if err := fCreator.GenerateCode(endpoint, endpointInfo, templateType); err != nil {
-				if err == errUnsupported {
-					logger.Warn(fmt.Sprintf("couldn't generate %s, continuing", endpoint))
-					continue
-				}
-				logger.Error(err.Error())
-				os.Exit(1)
-			}
-			// TODO - add fCreator.GenerateDoc() method
-			createdCount++
+			logger.Error(err.Error())
+			os.Exit(1)
 		}
+		// TODO - add fCreator.GenerateDoc() method
+		createdCount++
 	}
 	logger.Info(fmt.Sprintf("generated %d files\n", createdCount))
 	return nil
@@ -86,12 +81,12 @@ func (c *fileCreator) writeFile(pathToFile string, tmplType templateType, endpoi
 // createFileWriter creates a file and returns its writer for the caller to use in templating.
 // The closer will only be populated if the err is nil.
 func (c *fileCreator) createFileWriter(pathToFile, parentDir string) (wr *bufio.Writer, closer func(), err error) {
-	// We'll need to clean up multiple resources if we succeed in creating
-	// them. Let's gather them up along the way.
-	var cleanUps []func()
+	var cleanups []func() error
 	closer = func() {
-		for _, cleanUp := range cleanUps {
-			cleanUp()
+		for _, cleanup := range cleanups {
+			if err := cleanup(); err != nil {
+				c.logger.Error(err.Error())
+			}
 		}
 	}
 
@@ -103,19 +98,16 @@ func (c *fileCreator) createFileWriter(pathToFile, parentDir string) (wr *bufio.
 	if err != nil {
 		return nil, nil, err
 	}
-	cleanUps = append(cleanUps, func() {
-		if err := f.Close(); err != nil {
-			c.logger.Error(err.Error())
-		}
-	})
+	cleanups = []func() error{
+		f.Close,
+	}
 
 	// Open the file for writing.
 	wr = bufio.NewWriter(f)
-	cleanUps = append(cleanUps, func() {
-		if err := wr.Flush(); err != nil {
-			c.logger.Error(err.Error())
-		}
-	})
+	cleanups = []func() error{
+		wr.Flush,
+		f.Close,
+	}
 	return wr, closer, nil
 }
 

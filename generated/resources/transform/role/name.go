@@ -1,4 +1,5 @@
-package {{ .DirName }}
+package role
+
 // DO NOT EDIT
 // This code is generated.
 
@@ -9,18 +10,12 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
-	{{- if .SupportsWrite }}
 	"github.com/terraform-providers/terraform-provider-vault/util"
-	{{- end }}
 )
 
-{{- if .SupportsWrite }}
-const {{ .PrivateFuncPrefix }}Endpoint = "{{ .Endpoint }}"
-{{- else }}
-// This resource supports "{{ .Endpoint }}".
-{{ end }}
+const nameEndpoint = "name"
 
-func {{ .ExportedFuncPrefix }}Resource() *schema.Resource {
+func NameResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		"path": {
 			Type:        schema.TypeString,
@@ -31,65 +26,41 @@ func {{ .ExportedFuncPrefix }}Resource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-		{{- range .Parameters }}
-		"{{ .Name }}": {
-			{{- if (eq .Schema.Type "string") }}
+		"name": {
 			Type:        schema.TypeString,
-			{{- end }}
-			{{- if (eq .Schema.Type "boolean") }}
-			Type:        schema.TypeBool,
-			{{- end }}
-			{{- if (eq .Schema.Type "integer") }}
-			Type:        schema.TypeInt,
-			{{- end }}
-			{{- if (eq .Schema.Type "array") }}
+			Required:    true,
+			Description: "The name of the role.",
+			ForceNew:    true,
+		},
+		"transformations": {
 			Type:        schema.TypeList,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			{{- end }}
-			{{- if .Required }}
-			Required:    true,
-			{{- else }}
 			Optional:    true,
-			{{- end }}
-			{{- if .Schema.DisplayAttrs.Sensitive }}
-			Sensitive:   true,
-			{{- end }}
-			Description: "{{ .Description }}",
-			{{- if .ForceNew }}
-			ForceNew: true,
-			{{- end}}
+			Description: "A comma separated string or slice of transformations to use.",
 		},
-		{{- end }}
 	}
 	return &schema.Resource{
-		{{- if .SupportsWrite }}
-		Create: {{ .PrivateFuncPrefix }}CreateResource,
-		Update: {{ .PrivateFuncPrefix }}UpdateResource,
-		{{- end }}
-		{{- if .SupportsRead }}
-		Read:   {{ .PrivateFuncPrefix }}ReadResource,
-		Exists: {{ .PrivateFuncPrefix }}ResourceExists,
-		{{- end }}
-		{{- if .SupportsDelete }}
-		Delete: {{ .PrivateFuncPrefix }}DeleteResource,
-		{{- end }}
+		Create: nameCreateResource,
+		Update: nameUpdateResource,
+		Read:   nameReadResource,
+		Exists: nameResourceExists,
+		Delete: nameDeleteResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: fields,
 	}
 }
-
-{{- if .SupportsWrite }}
-func {{ .PrivateFuncPrefix }}CreateResource(d *schema.ResourceData, meta interface{}) error {
+func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Get("path").(string)
 	data := map[string]interface{}{}
-	{{- range .Parameters }}
-	if v, ok := d.GetOkExists("{{ .Name }}"); ok {
-		data["{{ .Name }}"] = v
+	if v, ok := d.GetOkExists("name"); ok {
+		data["name"] = v
 	}
-	{{- end }}
+	if v, ok := d.GetOkExists("transformations"); ok {
+		data["transformations"] = v
+	}
 
 	log.Printf("[DEBUG] Writing %q", path)
 	_, err := client.Logical().Write(util.ParsePath(path, nameEndpoint, d), data)
@@ -98,12 +69,10 @@ func {{ .PrivateFuncPrefix }}CreateResource(d *schema.ResourceData, meta interfa
 	}
 	d.SetId(path)
 	log.Printf("[DEBUG] Wrote %q", path)
-	return {{ .PrivateFuncPrefix }}ReadResource(d, meta)
+	return nameReadResource(d, meta)
 }
-{{ end }}
 
-{{- if .SupportsRead }}
-func {{ .PrivateFuncPrefix }}ReadResource(d *schema.ResourceData, meta interface{}) error {
+func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
 	log.Printf("[DEBUG] Reading %q", path)
@@ -117,28 +86,30 @@ func {{ .PrivateFuncPrefix }}ReadResource(d *schema.ResourceData, meta interface
 		d.SetId("")
 		return nil
 	}
-	{{- range .Parameters }}
-	if val, ok := resp.Data["{{ .Name }}"]; ok {
-        if err := d.Set("{{ .Name }}", val); err != nil {
-            return fmt.Errorf("error setting state key '{{ .Name }}': %s", err)
-        }
-    }
-	{{- end }}
+	if val, ok := resp.Data["name"]; ok {
+		if err := d.Set("name", val); err != nil {
+			return fmt.Errorf("error setting state key 'name': %s", err)
+		}
+	}
+	if val, ok := resp.Data["transformations"]; ok {
+		if err := d.Set("transformations", val); err != nil {
+			return fmt.Errorf("error setting state key 'transformations': %s", err)
+		}
+	}
 	return nil
 }
-{{ end }}
 
-{{- if .SupportsWrite }}
-func {{ .PrivateFuncPrefix }}UpdateResource(d *schema.ResourceData, meta interface{}) error {
+func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
 	log.Printf("[DEBUG] Updating %q", path)
 	data := map[string]interface{}{}
-	{{- range .Parameters }}
-	if d.HasChange("{{ .Name }}") {
-		data["{{ .Name }}"] = d.Get("{{ .Name }}")
+	if d.HasChange("name") {
+		data["name"] = d.Get("name")
 	}
-	{{- end }}
+	if d.HasChange("transformations") {
+		data["transformations"] = d.Get("transformations")
+	}
 	defer func() {
 		d.SetId(path)
 	}()
@@ -147,12 +118,10 @@ func {{ .PrivateFuncPrefix }}UpdateResource(d *schema.ResourceData, meta interfa
 		return fmt.Errorf("error updating template auth backend role %q: %s", path, err)
 	}
 	log.Printf("[DEBUG] Updated %q", path)
-	return {{ .PrivateFuncPrefix }}ReadResource(d, meta)
+	return nameReadResource(d, meta)
 }
-{{ end }}
 
-{{- if .SupportsDelete }}
-func {{ .PrivateFuncPrefix }}DeleteResource(d *schema.ResourceData, meta interface{}) error {
+func nameDeleteResource(d *schema.ResourceData, meta interface{}) error {
 	client := meta.(*api.Client)
 	path := d.Id()
 	log.Printf("[DEBUG] Deleting %q", path)
@@ -167,10 +136,8 @@ func {{ .PrivateFuncPrefix }}DeleteResource(d *schema.ResourceData, meta interfa
 	log.Printf("[DEBUG] Deleted template auth backend role %q", path)
 	return nil
 }
-{{ end }}
 
-{{- if .SupportsRead }}
-func {{ .PrivateFuncPrefix }}ResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+func nameResourceExists(d *schema.ResourceData, meta interface{}) (bool, error) {
 	client := meta.(*api.Client)
 	path := d.Id()
 	log.Printf("[DEBUG] Checking if %q exists", path)
@@ -181,4 +148,3 @@ func {{ .PrivateFuncPrefix }}ResourceExists(d *schema.ResourceData, meta interfa
 	log.Printf("[DEBUG] Checked if %q exists", path)
 	return resp != nil, nil
 }
-{{- end }}
