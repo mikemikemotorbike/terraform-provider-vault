@@ -5,5 +5,5 @@ package codegen
 // we should use.
 var endpointRegistry = map[string]templateType{
 	"/transform/role/{name}": templateTypeResource,
-	// TODO this will eventually list all endpoints and data sources we want to generate
+	// TODO in separate PR - this will eventually list all endpoints we want to generate
 }

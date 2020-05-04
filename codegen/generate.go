@@ -50,7 +50,7 @@ func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
 			logger.Error(err.Error())
 			os.Exit(1)
 		}
-		// TODO - add fCreator.GenerateDoc() method
+		// TODO in separate PR - add fCreator.GenerateDoc() method
 		createdCount++
 	}
 	logger.Info(fmt.Sprintf("generated %d files\n", createdCount))
