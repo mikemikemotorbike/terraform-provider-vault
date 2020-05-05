@@ -165,13 +165,13 @@ func collectParameters(endpointInfo *framework.OASPathItem) []*templatableParam 
 	return result
 }
 
-/*
-	This function exists because endpoints typically have only path parameters
-	included at their top level, and the rest of its parameters are embedded
-	in the post method. We must dig deep down into the post description to get
-	the rest of the parameters, and this is far, far easier to do using Go than
-	the templating language.
-*/
+// templatableParam mainly just reuses the OASParameter,
+// but adds on a ForceNew bool.
+type templatableParam struct {
+	*framework.OASParameter
+	ForceNew bool
+}
+
 func toTemplatableParam(param framework.OASParameter, isPathParameter bool) *templatableParam {
 	ptrToParam := &param
 	if ptrToParam.Schema == nil {
@@ -243,13 +243,6 @@ func (e *templatableEndpoint) Validate() error {
 		}
 	}
 	return nil
-}
-
-// templatableParam mainly just reuses the OASParameter,
-// but adds on a ForceNew bool.
-type templatableParam struct {
-	*framework.OASParameter
-	ForceNew bool
 }
 
 // clean takes a field like "{role_name}" and returns

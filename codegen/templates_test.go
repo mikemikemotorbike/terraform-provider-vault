@@ -1,8 +1,10 @@
 package codegen
 
 import (
-	"github.com/hashicorp/vault/sdk/framework"
+	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/framework"
 )
 
 func TestLastField(t *testing.T) {
@@ -223,7 +225,124 @@ func TestValidate(t *testing.T) {
 }
 
 func TestToTemplatableParam(t *testing.T) {
-	// TODO
+	type input struct {
+		param           framework.OASParameter
+		isPathParameter bool
+	}
+	testCases := []struct {
+		input    *input
+		expected *templatableParam
+	}{
+		{
+			input: &input{
+				param: framework.OASParameter{
+					Name:        "name",
+					Description: "description",
+					In:          "in",
+					Schema: &framework.OASSchema{
+						Type:        "type",
+						Description: "description",
+						Properties: map[string]*framework.OASSchema{
+							"something": {Description: "schema"},
+						},
+						Required: []string{"a"},
+						Items: &framework.OASSchema{
+							Description: "schema",
+						},
+						Format:           "format",
+						Pattern:          "pattern",
+						Enum:             []interface{}{"enum"},
+						Default:          "default",
+						Example:          "example",
+						Deprecated:       true,
+						DisplayValue:     "displayvalue",
+						DisplaySensitive: true,
+						DisplayGroup:     "displaygroup",
+						DisplayAttrs: &framework.DisplayAttributes{
+							Name:       "foo",
+							Value:      true,
+							Sensitive:  true,
+							Navigation: true,
+							Group:      "group",
+							Action:     "action",
+						},
+					},
+					Required:   true,
+					Deprecated: true,
+				},
+				isPathParameter: true,
+			},
+			expected: &templatableParam{
+				OASParameter: &framework.OASParameter{
+					Name:        "name",
+					Description: "description",
+					In:          "in",
+					Schema: &framework.OASSchema{
+						Type:        "type",
+						Description: "description",
+						Properties: map[string]*framework.OASSchema{
+							"something": {Description: "schema"},
+						},
+						Required: []string{"a"},
+						Items: &framework.OASSchema{
+							Description: "schema",
+						},
+						Format:           "format",
+						Pattern:          "pattern",
+						Enum:             []interface{}{"enum"},
+						Default:          "default",
+						Example:          "example",
+						Deprecated:       true,
+						DisplayValue:     "displayvalue",
+						DisplaySensitive: true,
+						DisplayGroup:     "displaygroup",
+						DisplayAttrs: &framework.DisplayAttributes{
+							Name:       "foo",
+							Value:      true,
+							Sensitive:  true,
+							Navigation: true,
+							Group:      "group",
+							Action:     "action",
+						},
+					},
+					Required:   true,
+					Deprecated: true,
+				},
+				ForceNew: true,
+			},
+		},
+		{
+			input: &input{
+				param: framework.OASParameter{
+					Name:        "",
+					Description: "",
+					In:          "",
+					Required:    false,
+					Deprecated:  false,
+				},
+				isPathParameter: false,
+			},
+			expected: &templatableParam{
+				OASParameter: &framework.OASParameter{
+					Name:        "",
+					Description: "",
+					In:          "",
+					Schema: &framework.OASSchema{
+						DisplayAttrs: &framework.DisplayAttributes{},
+					},
+					Required:   false,
+					Deprecated: false,
+				},
+				ForceNew: false,
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		actual := toTemplatableParam(testCase.input.param, testCase.input.isPathParameter)
+		if !reflect.DeepEqual(testCase.expected, actual) {
+			t.Fatalf("expected %+v but received %+v", testCase.expected, actual)
+		}
+	}
 }
 
 func TestCollectParameters(t *testing.T) {
