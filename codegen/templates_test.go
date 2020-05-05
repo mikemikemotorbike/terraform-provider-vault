@@ -3,10 +3,12 @@ package codegen
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/hashicorp/go-hclog"
+	"io"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
 )
 
@@ -358,11 +360,11 @@ func TestCollectParameters(t *testing.T) {
 		switch i {
 		case 0:
 			if parameters[0].Name != "name" {
-				t.Fatal()
+				t.Fatalf("expected 'name' but received %q", parameters[0].Name)
 			}
 		case 1:
-			if parameters[0].Name != "transformations" {
-				t.Fatal()
+			if parameters[1].Name != "transformations" {
+				t.Fatalf("expected 'transformations' but received %q", parameters[1].Name)
 			}
 		default:
 			t.Fatalf("expected 2 parameters but received %d", len(parameters))
@@ -383,7 +385,26 @@ func TestTemplateHandler(t *testing.T) {
 	if err := h.Write(buf, templateTypeResource, "role", "/transform/role/{name}", endpointInfo); err != nil {
 		t.Fatal(err)
 	}
-	// TODO read the buffer
+	result := ""
+	chunk := make([]byte, 500)
+	for {
+		_, err := buf.Read(chunk)
+		if err != nil {
+			if err == io.EOF {
+				result += string(chunk)
+				break
+			}
+			t.Fatal(err)
+		}
+		result += string(chunk)
+	}
+	// We only spot check here because resources will be covered by their
+	// own tests fully testing validity. This test is mainly to make sure
+	// we're getting something that looks correct back rather than an empty
+	// string.
+	if !strings.Contains(result, "nameResourceExists") {
+		t.Fatalf("unexpected result: %s", result)
+	}
 }
 
 // based on "/transform/role/{name}"
