@@ -109,7 +109,22 @@ documented above.
 
 ## Attributes Reference
 
-No additional attributes are exported by this resource.
+* `backend` -  The unique path of the Vault backend
+* `bind_secret_id` - bool value
+* `id` - path of token role
+* `period`
+* `role_id` - token role ID 
+* `role-name` - (string: "") - Name of the AppRole
+* `secret_id_num_uses` - (integer: 0) - Number of times any particular SecretID can be used to fetch a token from this AppRole, after which the SecretID will expire. A value of zero will allow unlimited uses.
+* `secret_id_ttl` - (string: "") - Duration in either an integer number of seconds (3600) or an integer time unit (60m) after which any SecretID expires.
+* `token_explicit_max_ttl` - (integer: 0 or string: "") - If set, will encode an explicit max TTL onto the token. This is a hard cap even if token_ttl and token_max_ttl would otherwise allow a renewal.
+* `token_max_ttl` - (integer: 0 or string: "") - The maximum lifetime for generated tokens. This current value of this will be referenced at renewal time.
+* `token_no_default_policy` bool value 
+* `token_num_uses` -(integer: 0) - The maximum number of times a generated token may be used (within its lifetime); 0 means unlimited.
+* `token_period` - (integer: 0 or string: "") - The period, if any, to set on the token.
+* `token_policies` - (array: [] or comma-delimited string: "") - List of policies encoded onto generated tokens.
+* `token_ttl"` - (integer: 0 or string: "") - The incremental lifetime for generated tokens. This current value of this will be referenced at renewal time.
+* `token_type"` - Type of token
 
 ## Import
 
