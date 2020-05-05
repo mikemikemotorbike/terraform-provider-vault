@@ -1,6 +1,9 @@
 package codegen
 
 import (
+	"bytes"
+	"encoding/json"
+	"github.com/hashicorp/go-hclog"
 	"reflect"
 	"testing"
 
@@ -346,17 +349,105 @@ func TestToTemplatableParam(t *testing.T) {
 }
 
 func TestCollectParameters(t *testing.T) {
-	// TODO
+	endpointInfo := &framework.OASPathItem{}
+	if err := json.Unmarshal([]byte(testEndpoint), endpointInfo); err != nil {
+		t.Fatal(err)
+	}
+	parameters := collectParameters(endpointInfo)
+	for i := 0; i < len(parameters); i++ {
+		switch i {
+		case 0:
+			if parameters[0].Name != "name" {
+				t.Fatal()
+			}
+		case 1:
+			if parameters[0].Name != "transformations" {
+				t.Fatal()
+			}
+		default:
+			t.Fatalf("expected 2 parameters but received %d", len(parameters))
+		}
+	}
 }
 
-func TestToTemplatable(t *testing.T) {
-	// TODO
+func TestTemplateHandler(t *testing.T) {
+	h, err := newTemplateHandler(hclog.Default())
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpointInfo := &framework.OASPathItem{}
+	if err := json.Unmarshal([]byte(testEndpoint), endpointInfo); err != nil {
+		t.Fatal(err)
+	}
+	buf := bytes.NewBuffer([]byte{})
+	if err := h.Write(buf, templateTypeResource, "role", "/transform/role/{name}", endpointInfo); err != nil {
+		t.Fatal(err)
+	}
+	// TODO read the buffer
 }
 
-func TestWrite(t *testing.T) {
-	// TODO
-}
-
-func TestNewTemplateHandler(t *testing.T) {
-	// TODO
-}
+// based on "/transform/role/{name}"
+const testEndpoint = `{
+	"description": "Read, write, and delete roles.",
+	"parameters": [{
+		"name": "name",
+		"description": "The name of the role.",
+		"in": "path",
+		"schema": {
+			"type": "string"
+		},
+		"required": true
+	}],
+	"x-vault-createSupported": true,
+	"get": {
+		"operationId": "getTransformRoleName",
+		"tags": [
+			"secrets"
+		],
+		"responses": {
+			"200": {
+				"description": "OK"
+			}
+		}
+	},
+	"post": {
+		"operationId": "postTransformRoleName",
+		"tags": [
+			"secrets"
+		],
+		"requestBody": {
+			"content": {
+				"application/json": {
+					"schema": {
+						"type": "object",
+						"properties": {
+							"transformations": {
+								"type": "array",
+								"description": "A comma separated string or slice of transformations to use.",
+								"items": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"responses": {
+			"200": {
+				"description": "OK"
+			}
+		}
+	},
+	"delete": {
+		"operationId": "deleteTransformRoleName",
+		"tags": [
+			"secrets"
+		],
+		"responses": {
+			"204": {
+				"description": "empty body"
+			}
+		}
+	}
+}`
