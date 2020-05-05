@@ -31,17 +31,20 @@ var (
 )
 
 func Run(logger hclog.Logger, paths map[string]*framework.OASPathItem) error {
+	// Read in the templates we'll be using.
 	h, err := newTemplateHandler(logger)
 	if err != nil {
 		return err
 	}
+	// Use a file creator so the logger can always be available without having
+	// to awkwardly pass it in everywhere.
 	fCreator := &fileCreator{
 		logger:          logger,
 		templateHandler: h,
 	}
 	createdCount := 0
 	for endpoint, templateType := range endpointRegistry {
-		logger.Debug(fmt.Sprintf("generating %s for %s\n", templateType.String(), endpoint))
+		logger.Info(fmt.Sprintf("generating %s for %s\n", templateType.String(), endpoint))
 		if err := fCreator.GenerateCode(endpoint, paths[endpoint], templateType); err != nil {
 			if err == errUnsupported {
 				logger.Warn(fmt.Sprintf("couldn't generate %s, continuing", endpoint))
@@ -67,6 +70,8 @@ func (c *fileCreator) GenerateCode(endpoint string, endpointInfo *framework.OASP
 	pathToFile := codeFilePath(tmplType, endpoint)
 	return c.writeFile(pathToFile, tmplType, endpoint, endpointInfo)
 }
+
+// TODO add a GenerateDoc method.
 
 func (c *fileCreator) writeFile(pathToFile string, tmplType templateType, endpoint string, endpointInfo *framework.OASPathItem) error {
 	parentDir := parentDir(pathToFile)

@@ -128,6 +128,9 @@ func (h *templateHandler) toTemplatable(parentDir, endpoint string, endpointInfo
 	return t, nil
 }
 
+// collectParameters walks a PathItem and looks for all the parameters
+// described. Some are at the top level of the path, indicating they are
+// path parameters. Others are only in the post body.
 func collectParameters(endpointInfo *framework.OASPathItem) []*templatableParam {
 	var result []*templatableParam
 	for _, param := range endpointInfo.Parameters {
@@ -201,6 +204,9 @@ type templatableEndpoint struct {
 }
 
 func (e *templatableEndpoint) Validate() error {
+	if e == nil {
+		return fmt.Errorf("endpoint is nil")
+	}
 	if e.Endpoint == "" {
 		return fmt.Errorf("endpoint cannot be blank for %+v", e)
 	}
@@ -226,14 +232,14 @@ func (e *templatableEndpoint) Validate() error {
 				// each template and add additional logic supporting the new array
 				// type.
 				if parameter.Schema.Items.Type != "string" {
-					return fmt.Errorf("unsupported array type of %s for %+v", parameter.Schema.Items.Type, parameter)
+					return fmt.Errorf("unsupported array type of %s for %s", parameter.Schema.Items.Type, parameter.Name)
 				}
 				isSupported = true
 				break
 			}
 		}
 		if !isSupported {
-			return fmt.Errorf("unsupported type of %s for %+v", parameter.Schema.Type, parameter)
+			return fmt.Errorf("unsupported type of %s for %s", parameter.Schema.Type, parameter.Name)
 		}
 	}
 	return nil
@@ -254,7 +260,7 @@ func clean(field string) string {
 }
 
 // For an endpoint like "/transform/role/{name}", returns
-// "{name}"
+// "{name}".
 func lastField(endpoint string) string {
 	endpointFields := strings.Split(endpoint, "/")
 	lastFieldPosition := len(endpointFields) - 1
